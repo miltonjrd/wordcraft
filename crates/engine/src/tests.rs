@@ -7232,3 +7232,22 @@ fn vertical_align_command_sets_justified() {
         assert_eq!(serde_json::to_value(crate::cmd::page::sect(&s)).unwrap()["valign"], json!(name));
     }
 }
+
+/// One click with the format painter (no selection) formats the whole paragraph, like Word.
+#[test]
+fn format_painter_click_formats_the_whole_paragraph() {
+    let mut s = s();
+    run(&mut s, "text.insert", json!({"text": "Source"}));
+    run(&mut s, "select.all", json!({}));
+    run(&mut s, "format.bold", json!({}));
+    run(&mut s, "caret.docEnd", json!({}));
+    run(&mut s, "text.newParagraph", json!({}));
+    run(&mut s, "text.insert", json!({"text": "one two three"}));
+    run(&mut s, "caret.set", json!({"pos": Pos::body(0, 3)}));
+    run(&mut s, "edit.formatPainter", json!({}));
+    run(&mut s, "caret.set", json!({"pos": Pos::body(1, 5)}));
+    run(&mut s, "edit.pasteFormat", json!({}));
+    let p = s.doc.para_at(&Pos::body(1, 0)).unwrap();
+    assert!((0..p.len()).all(|i| p.props_of_char(i).bold == Some(true)), "every character is bold");
+    assert!(s.painter.is_none());
+}

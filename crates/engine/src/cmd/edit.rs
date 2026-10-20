@@ -730,11 +730,15 @@ fn paste_format(s: &mut Session, _: &Value) -> CmdResult {
     let Some((chr, para, sticky)) = s.painter.clone() else { return Err(CmdError::Failed("no formatting copied".into())) };
     let (a, b) = s.sel.ordered();
     if a == b {
-        // No selection: apply paragraph formatting (and word formatting like Word).
+        // A click without a selection formats the whole paragraph (text and paragraph formatting).
         let f = s.sel.focus.clone();
         if let Some(pp) = s.doc.para_at(&f) {
-            let (x, y) = pp.word_at(f.off);
-            s.doc.format_range(&Pos { off: x, ..f.clone() }, &Pos { off: y, ..f.clone() }, &|c| *c = chr.cleared().overlaid(&chr))?;
+            let end = pp.len();
+            s.doc.format_range(&Pos { off: 0, ..f.clone() }, &Pos { off: end, ..f.clone() }, &|c| {
+                let link = c.link.clone();
+                *c = c.cleared().overlaid(&chr);
+                c.link = link;
+            })?;
         }
         s.doc.format_paragraphs(&a, &b, &|p| *p = para.clone())?;
     } else {
